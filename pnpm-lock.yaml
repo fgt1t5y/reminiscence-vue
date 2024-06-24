@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@remixicon/vue':
+        specifier: ^4.2.0
+        version: 4.2.0(vue@3.4.30(typescript@5.5.2))
       vue:
         specifier: ^3.4.29
         version: 3.4.30(typescript@5.5.2)
@@ -199,6 +202,11 @@ packages:
 
   '@jridgewell/sourcemap-codec@1.4.15':
     resolution: {integrity: sha512-eF2rxCRulEKXHTRiDrDy6erMYWqNw4LPdQ8UQA4huuxaQsVeRPFl2oM8oDGxMFhJUWZf9McpLtJasDDZb/Bpeg==}
+
+  '@remixicon/vue@4.2.0':
+    resolution: {integrity: sha512-dFtPQPi45sZ4X3Jl2ZNxEE5j2dAmo8vfHA1wvjUCwybQnyAGKSBVQlqZqP0wKzrtBbVqRXK0tgQx+Fw8GZ45qg==}
+    peerDependencies:
+      vue: '>= 3'
 
   '@rollup/rollup-android-arm-eabi@4.18.0':
     resolution: {integrity: sha512-Tya6xypR10giZV1XzxmH5wr25VcZSncG0pZIjfePT0OVBvqNEurzValetGNarVrGiq66EBVAFn15iYX4w6FKgQ==}
@@ -575,6 +583,10 @@ snapshots:
   '@intlify/shared@9.13.1': {}
 
   '@jridgewell/sourcemap-codec@1.4.15': {}
+
+  '@remixicon/vue@4.2.0(vue@3.4.30(typescript@5.5.2))':
+    dependencies:
+      vue: 3.4.30(typescript@5.5.2)
 
   '@rollup/rollup-android-arm-eabi@4.18.0':
     optional: true

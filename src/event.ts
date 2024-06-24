@@ -1,7 +1,10 @@
+import type { IItemCount } from "./items";
+
 export interface IEventCondition {
   day: number;
-  time: "morning" | "afternoon" | "night";
-  hasItem: { item: string; count: number }[];
+  // time: "morning" | "afternoon" | "night";
+  time: number;
+  hasItem: IItemCount[];
   eventCompleted: string[];
 }
 

@@ -1,7 +1,12 @@
+export interface IItemCount {
+  item: string;
+  count: number;
+}
+
 export interface IItemProps {
   tag: string[];
   price: number;
-  buyCount?: number;
+  buyCount: number;
   recipe?: Record<string, number>;
   craftCount?: number;
 }

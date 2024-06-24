@@ -41,17 +41,14 @@ html {
 
 .game-data-display {
   display: flex;
-  align-items: block-start;
   justify-content: space-between;
 }
 
-.game-data-display div {
+.game-data-display .data-item {
   display: flex;
-  flex-direction: column;
-}
-
-.game-data-display span {
-  font-size: 1.3rem;
+  width: 25%;
+  overflow: hidden;
+  gap: 8px;
 }
 
 .game-data-display .btn-regular {

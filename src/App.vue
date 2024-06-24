@@ -15,21 +15,21 @@
     </dialog>
     <dialog class="game-screen" ref="gameScreen">
       <div class="game-data-display">
-        <div>
-          <b>{{ $t("ui.day") }}</b>
+        <div class="data-item">
+          <RiCalendar2Line />
           <span>{{ currentData.day }}</span>
         </div>
-        <div>
-          <b>{{ $t("ui.time") }}</b>
+        <div class="data-item">
+          <RiTimeLine />
           <span>{{ $t(`ui.time.${currentData.time}`) }}</span>
         </div>
-        <div>
-          <b>{{ $t("ui.money") }}</b>
+        <div class="data-item">
+          <RiCopperCoinLine />
           <span>{{ currentData.money }}</span>
         </div>
-        <div>
-          <b>{{ $t("ui.fame") }}</b>
-          <span>{{ currentData.fame }}</span>
+        <div class="data-item">
+          <RiUserHeartLine />
+          <span>{{ currentData.fame.toFixed(1) }}</span>
         </div>
       </div>
       <hr />
@@ -41,13 +41,41 @@
           <summary>
             <h3>{{ $t("ui.ingredients") }}</h3>
           </summary>
-          <div class="inventory">${this.#renderInventory('ingredient')}</div>
+          <div class="inventory">
+            <div
+              v-if="ingredientList"
+              v-for="ingredient in ingredientList"
+              class="list-item"
+            >
+              <div class="item-name">
+                <div>
+                  {{ $t(`item.${ingredient}`) }} ×
+                  {{ currentData.inventory[ingredient] }}
+                </div>
+              </div>
+            </div>
+            <div v-else>{{ $t("ui.emptyInventory") }}</div>
+          </div>
         </details>
         <details open>
           <summary>
             <h3>{{ $t("ui.products") }}</h3>
           </summary>
-          <div class="inventory">${this.#renderInventory('product')}</div>
+          <div class="inventory">
+            <div
+              v-if="productList.length > 0"
+              v-for="product in productList"
+              class="list-item"
+            >
+              <div class="item-name">
+                <div>
+                  {{ $t(`item.${product}`) }} ×
+                  {{ currentData.inventory[product] }}
+                </div>
+              </div>
+            </div>
+            <div v-else>{{ $t("ui.emptyInventory") }}</div>
+          </div>
         </details>
       </details>
       <hr />
@@ -55,19 +83,12 @@
         <summary>
           <h2>{{ $t("ui.recipes") }}</h2>
         </summary>
-        <div class="recipes">${this.#renderRecipes()}</div>
-      </details>
-      <hr />
-      <details>
-        <summary>
-          <h2>{{ $t("ui.purchase") }}</h2>
-        </summary>
-        <div class="purchase">
-          <div v-for="purchase in purchaseList" class="list-item">
+        <div class="recipes">
+          <div v-for="recipe in recipeList" class="list-item">
             <div class="item-name">
               <div>
-                {{ $t(`item.${purchase}`) }} ×
-                {{ itemProperties[purchase].buyCount }}
+                {{ $t(`item.${recipe}`) }} ×
+                {{ itemProperties[recipe].craftCount }}
               </div>
             </div>
             <div class="purchase-count">
@@ -79,6 +100,19 @@
               </div>
             </div>
           </div>
+        </div>
+      </details>
+      <hr />
+      <details open>
+        <summary>
+          <h2>{{ $t("ui.purchase") }}</h2>
+        </summary>
+        <div class="purchase">
+          <PurchaseItem
+            v-for="purchase in purchaseList"
+            :item="purchase"
+            @purchase="handlePurchase"
+          />
         </div>
       </details>
     </dialog>
@@ -94,7 +128,9 @@
         ref="consoleInput"
         @keydown="handleConsoleKeydown"
       ></textarea>
-      <button class="submit" @click="handleConsoleSubmit">OK</button>
+      <button class="submit" @click="handleConsoleSubmit">
+        <RiCheckLine />
+      </button>
     </div>
   </div>
 </template>
@@ -111,9 +147,17 @@ import {
 } from "./GameData";
 import { compareObjects } from "./utils";
 import { computed } from "vue";
-import { itemProperties } from "./items";
+import { type IItemCount, itemProperties } from "./items";
 import { gameEvents } from "./events";
 import type { IEventAction, IEventReward } from "./event";
+import PurchaseItem from "./components/PurchaseItem.vue";
+import {
+  RiCalendar2Line,
+  RiTimeLine,
+  RiCopperCoinLine,
+  RiUserHeartLine,
+  RiCheckLine,
+} from "@remixicon/vue";
 
 const { t, mergeLocaleMessage } = useI18n();
 
@@ -123,6 +167,7 @@ gameEvents.forEach((event) => {
   mergeLocaleMessage("zh_CN", event.languageMap.zh_CN);
 });
 
+// 当前存档数据直接设为新存档的数据，这样就不用新建存档的时候再复制
 const currentData = ref<IGameData>(defaultData);
 const currentSettings = ref<ISettings>(defaultSettings);
 const titleScreen = ref<HTMLDialogElement>();
@@ -130,6 +175,26 @@ const consolePanel = ref<HTMLDivElement>();
 const consoleInput = ref<HTMLTextAreaElement>();
 const gameScreen = ref<HTMLDialogElement>();
 const currentSlot = ref<number>(0);
+
+const ingredientList = computed(() => {
+  return Object.keys(currentData.value.inventory ?? {})
+    .sort()
+    .filter((item) => {
+      return itemProperties[item].tag.includes("ingredient");
+    });
+});
+
+const productList = computed(() => {
+  return Object.keys(currentData.value.inventory ?? {})
+    .sort()
+    .filter((item) => {
+      return itemProperties[item].tag.includes("product");
+    });
+});
+
+const recipeList = computed(() => {
+  return Object.keys(currentData.value.recipes ?? {});
+});
 
 const purchaseList = computed(() => {
   return Object.keys(itemProperties)
@@ -158,6 +223,9 @@ const gameConsole = {
       behavior: "smooth",
     });
   },
+  t: (key: string) => {
+    gameConsole.put(t(key));
+  },
   clear: () => {
     consolePanel.value!.innerHTML = "";
   },
@@ -179,34 +247,34 @@ const executeCommand = (data: string) => {
   if (!data) return;
 
   if (data.startsWith("help")) {
-    gameConsole.put(t("help.title"));
-    gameConsole.put(t("help.command.help"));
-    gameConsole.put(t("help.command.clear"));
-    gameConsole.put(t("help.command.settings"));
-    gameConsole.put(t("help.command.save"));
-    gameConsole.put(t("help.command.load"));
-    gameConsole.put(t("help.command.delete"));
+    gameConsole.t("help.title");
+    gameConsole.t("help.command.help");
+    gameConsole.t("help.command.clear");
+    gameConsole.t("help.command.settings");
+    gameConsole.t("help.command.save");
+    gameConsole.t("help.command.load");
+    gameConsole.t("help.command.delete");
   } else if (data.trim() == "clear") {
     gameConsole.clear();
   } else if (data.trim() == "settings") {
-    gameConsole.put(t("message.system.notImplemented"));
+    gameConsole.t("message.system.notImplemented");
   } else if (data.trim().startsWith("save")) {
     let slot = Number(data.split(" ")[1]);
     if (slot >= 0 && slot <= 4 && Number.isInteger(slot)) {
       saveGame(slot);
       gameConsole.put(t("message.system.saved") + `${slot}`);
     } else {
-      gameConsole.put(t("message.system.invalidSlot"));
+      gameConsole.t("message.system.invalidSlot");
     }
   } else if (data.trim().startsWith("load")) {
     let slot = Number(data.split(" ")[1]);
     if (slot >= 0 && slot <= 4 && Number.isInteger(slot)) {
       let isNewGame = loadGame(slot);
       if (isNewGame == false) {
-        gameConsole.put(t("message.system.loaded"));
+        gameConsole.t("message.system.loaded");
       }
     } else {
-      gameConsole.put(t("message.system.invalidSlot"));
+      gameConsole.t("message.system.invalidSlot");
     }
   } else if (data.trim().startsWith("delete")) {
     let slot = Number(data.split(" ")[1]);
@@ -214,13 +282,13 @@ const executeCommand = (data: string) => {
       GameData.setItem(`saves.${slot}`, {});
       gameConsole.put(t("message.system.deletedSave") + `${slot}`);
     } else {
-      gameConsole.put(t("message.system.invalidSlot"));
+      gameConsole.t("message.system.invalidSlot");
     }
   } else if (data.trim().startsWith("money")) {
     let nm = Number(data.split(" ")[1]);
     currentData.value.money = nm;
   } else {
-    gameConsole.put(t("message.system.invalidCommand"));
+    gameConsole.t("message.system.invalidCommand");
   }
   consoleInput.value!.value = "";
 };
@@ -242,7 +310,7 @@ const saveGame = (slot: number) => {
 
 const loadGame = (slot: number) => {
   GameData.setItem("autoLoad", slot);
-  location.reload();
+  autoLoad();
 };
 
 const autoLoad = () => {
@@ -261,7 +329,7 @@ const autoLoad = () => {
       return false;
     } else {
       startNewGame();
-      gameConsole.put(t("message.system.noSaveFound"));
+      gameConsole.t("message.system.noSaveFound");
       currentSlot.value = autoLoad;
       GameData.setItem("autoLoad", null);
       return true;
@@ -269,19 +337,20 @@ const autoLoad = () => {
   }
 };
 
-const createDialogItem = (name: string, text: string, icon: string) => {
-  // let item = createElement("aq-minicard");
-  // let header = createElement("aq-ts")
-  //   .attribute("key", name)
-  //   .attribute("slot", "header");
-  // let content = createElement("aq-ts").attribute("key", text);
-  // item.appendChild(header);
-  // item.appendChild(content);
-  // if (icon) {
-  //   item.icon = icon;
-  // }
-  // return item;
-};
+// const createDialogItem = (name: string, text: string, icon: string) => {
+//   let item = document.createElement("div");
+//   item.classList.add('minicard')
+//   let header = createElement("aq-ts")
+//     .attribute("key", name)
+//     .attribute("slot", "header");
+//   let content = createElement("aq-ts").attribute("key", text);
+//   item.appendChild(header);
+//   item.appendChild(content);
+//   if (icon) {
+//     item.icon = icon;
+//   }
+//   return item;
+// };
 
 const listenToEvents = () => {
   gameEvents.forEach((event) => {
@@ -293,10 +362,7 @@ const listenToEvents = () => {
       switch (step.type) {
         case "dialog": {
           const s = step as IEventAction<"dialog">;
-          gameConsole.put(
-            // createDialogItem(s.data.name, s.data.text, s.data.icon)
-            s.data.text
-          );
+          gameConsole.t(s.data.text);
           break;
         }
         case "text": {
@@ -365,7 +431,7 @@ const listenToEvents = () => {
 
 const checkEventConditions = () => {
   gameEvents.forEach((event) => {
-    // console.debug(`Checking event condition: ${event.id}`);
+    console.debug(`Checking event condition: ${event.id}`);
     if (
       currentData.value.completedEvents.includes(event.id) &&
       event.repeatable == false
@@ -433,13 +499,26 @@ const checkEventConditions = () => {
   });
 };
 
+const handlePurchase = (order: IItemCount) => {
+  let item = order.item;
+  let price = itemProperties[item].price;
+  let count = order.count * itemProperties[item].buyCount;
+  let sum = price * count;
+  let originCount = currentData.value.inventory[item] ?? 0;
+  if (currentData.value.money >= sum) {
+    currentData.value.money -= sum;
+    currentData.value.inventory[item] = count + originCount;
+    checkEventConditions();
+  }
+};
+
 onMounted(() => {
-  gameConsole.put(t("message.system.inited"));
+  gameConsole.t("message.system.inited");
 
   let data = GameData.getData();
   currentSettings.value = data || defaultSettings;
   GameData.saveData(currentSettings.value);
 
-  autoLoad();
+  // autoLoad();
 });
 </script>
