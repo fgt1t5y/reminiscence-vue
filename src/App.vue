@@ -32,6 +32,26 @@
           <span>{{ currentData.fame.toFixed(1) }}</span>
         </div>
       </div>
+      <div class="game-toolbar">
+        <button
+          v-if="currentData.flags.firstDayCompleted"
+          class="btn-regular"
+          :disabled="currentData.ongoingEvent !== null"
+          @click="dayLapse()"
+        >
+          <RiArrowRightSLine />
+          {{ $t("ui.nextDay") }}
+        </button>
+        <button
+          v-if="currentData.flags.firstDayCompleted"
+          class="btn-regular"
+          :disabled="currentData.ongoingEvent !== null"
+          @click="timeLapse()"
+        >
+          <RiZzzLine />
+          {{ $t("ui.nextTime") }}
+        </button>
+      </div>
       <hr />
       <details open>
         <summary>
@@ -84,22 +104,11 @@
           <h2>{{ $t("ui.recipes") }}</h2>
         </summary>
         <div class="recipes">
-          <div v-for="recipe in recipeList" class="list-item">
-            <div class="item-name">
-              <div>
-                {{ $t(`item.${recipe}`) }} ×
-                {{ itemProperties[recipe].craftCount }}
-              </div>
-            </div>
-            <div class="purchase-count">
-              <div>{{ $t("ui.purchaseCount") }}</div>
-              <div>
-                <button>1</button>
-                <button>10</button>
-                <button>100</button>
-              </div>
-            </div>
-          </div>
+          <RecipeItem
+            v-for="recipe in recipeList"
+            :item="recipe"
+            @craft="handleCraft"
+          />
         </div>
       </details>
       <hr />
@@ -138,20 +147,23 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import {
-  GameData,
-  type IGameData,
-  defaultData,
-  defaultSettings,
-  type ISettings,
-} from "./GameData";
+import type {
+  ISettings,
+  IGameData,
+  IItemCount,
+  IEventAction,
+  IEventReward,
+} from "./type";
+import { GameData, defaultData, defaultSettings } from "./GameData";
 import { compareObjects } from "./utils";
 import { computed } from "vue";
-import { type IItemCount, itemProperties } from "./items";
+import { itemProperties } from "./items";
 import { gameEvents } from "./events";
-import type { IEventAction, IEventReward } from "./event";
 import PurchaseItem from "./components/PurchaseItem.vue";
+import RecipeItem from "./components/RecipeItem.vue";
 import {
+  RiZzzLine,
+  RiArrowRightSLine,
   RiCalendar2Line,
   RiTimeLine,
   RiCopperCoinLine,
@@ -269,10 +281,8 @@ const executeCommand = (data: string) => {
   } else if (data.trim().startsWith("load")) {
     let slot = Number(data.split(" ")[1]);
     if (slot >= 0 && slot <= 4 && Number.isInteger(slot)) {
-      let isNewGame = loadGame(slot);
-      if (isNewGame == false) {
-        gameConsole.t("message.system.loaded");
-      }
+      loadGame(slot);
+      gameConsole.t("message.system.loaded");
     } else {
       gameConsole.t("message.system.invalidSlot");
     }
@@ -295,7 +305,6 @@ const executeCommand = (data: string) => {
 
 const startNewGame = () => {
   titleScreen.value!.close();
-  // currentData.value = structuredClone(defaultData);
   saveGame(0);
   gameScreen.value!.show();
   gameConsole.clear();
@@ -311,6 +320,9 @@ const saveGame = (slot: number) => {
 const loadGame = (slot: number) => {
   GameData.setItem("autoLoad", slot);
   autoLoad();
+
+  listenToEvents();
+  checkEventConditions();
 };
 
 const autoLoad = () => {
@@ -445,7 +457,7 @@ const checkEventConditions = () => {
     let data = currentData.value;
     let condition = event.condition;
     let isEventStartable = false;
-    let flags = [];
+    let flags = [] as boolean[];
 
     if (Object.keys(condition).length == 0) isEventStartable = true;
 
@@ -453,7 +465,7 @@ const checkEventConditions = () => {
       console.debug(
         `Checking event condition: ${event.id}, day requied ${condition.day}, current day ${data?.day}`
       );
-      if (data?.day >= condition.day) {
+      if (data?.day >= condition.day!) {
         flags.push(true);
       } else flags.push(false);
     }
@@ -463,7 +475,7 @@ const checkEventConditions = () => {
       } else flags.push(false);
     }
     if ("hasItem" in condition) {
-      let items = condition.hasItem;
+      let items = condition.hasItem!;
       let allExists = items.every(
         (item) =>
           data?.inventory?.[item.item] &&
@@ -474,7 +486,7 @@ const checkEventConditions = () => {
       } else flags.push(false);
     }
     if ("eventCompleted" in condition) {
-      let targets = condition.eventCompleted;
+      let targets = condition.eventCompleted!;
       let allCompleted = targets.every((target) =>
         data.completedEvents.includes(target)
       );
@@ -499,12 +511,75 @@ const checkEventConditions = () => {
   });
 };
 
+const dayLapse = (count = 1) => {
+  currentData.value.day += count;
+  sellByTime(3 - currentData.value.time);
+  currentData.value.time = 0;
+  checkEventConditions();
+};
+
+const timeLapse = (count = 1) => {
+  let time = currentData.value.time;
+  if (time == 2) {
+    dayLapse();
+  } else {
+    currentData.value.time += count;
+  }
+  sellByTime();
+  checkEventConditions();
+};
+
+const sellByTime = (time = 1) => {
+  if (currentData.value.day == 0) return;
+  for (let i = 0; i < time; i++) {
+    let fame = currentData.value.fame;
+    let itemList = Object.keys(currentData.value.inventory ?? {});
+    let sellableItems = itemList.filter((item) =>
+      itemProperties[item].tag.includes("product")
+    );
+    sellableItems.forEach((item) => {
+      let stockedCount = currentData.value.inventory[item];
+      let sellCount = Math.min(stockedCount, Math.ceil(fame * stockedCount));
+      if (sellCount == 0) return;
+      gameConsole.put(
+        `${t("message.game.sold_")} ${t(`item.${item}`)} × ${sellCount}，${t(
+          "message.game.earned_"
+        )} ${sellCount * itemProperties[item].price}`
+      );
+      currentData.value.inventory[item] = stockedCount - sellCount;
+      currentData.value.fame += sellCount * 0.003;
+      currentData.value.money += sellCount * itemProperties[item].price;
+    });
+  }
+};
+
+const handleCraft = (order: IItemCount) => {
+  const { item, count, recipe } = order;
+  let craftCount = itemProperties[item].craftCount ?? 1;
+  let inventory = currentData.value.inventory;
+  let ingredientList = Object.keys(recipe!);
+  let canCraft = ingredientList.every(
+    (ingr) => inventory?.[ingr] >= recipe![ingr] * count
+  );
+  const originCount = currentData.value.inventory[item] || 0;
+  if (canCraft) {
+    currentData.value.inventory[item] = originCount + count * craftCount;
+    ingredientList.forEach((ingr) => {
+      const origin = currentData.value.inventory[ingr];
+      currentData.value.inventory[ingr] = origin - recipe![ingr] * count;
+    });
+    checkEventConditions();
+  } else {
+    alert(t("message.game.notEnoughIngredient"));
+  }
+};
+
 const handlePurchase = (order: IItemCount) => {
   let item = order.item;
   let price = itemProperties[item].price;
-  let count = order.count * itemProperties[item].buyCount;
+  let count = order.count * itemProperties[item].buyCount! || 1;
   let sum = price * count;
-  let originCount = currentData.value.inventory[item] ?? 0;
+  let originCount = currentData.value.inventory[item] || 0;
   if (currentData.value.money >= sum) {
     currentData.value.money -= sum;
     currentData.value.inventory[item] = count + originCount;

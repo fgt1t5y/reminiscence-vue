@@ -1,59 +1,9 @@
-import type { IItemCount } from "./items";
-
-export interface IEventCondition {
-  day: number;
-  // time: "morning" | "afternoon" | "night";
-  time: number;
-  hasItem: IItemCount[];
-  eventCompleted: string[];
-}
-
-export interface IEventAction<TYPE = "dialog" | "text" | "condition"> {
-  type: TYPE;
-  data: TYPE extends "dialog"
-    ? {
-        name: string;
-        text: string;
-        icon: string;
-      }
-    : TYPE extends "text"
-    ? string
-    : never;
-}
-
-export interface IEventReward<
-  TYPE = "item" | "flag" | "money" | "recipe" | "fame"
-> {
-  type: TYPE;
-  data: TYPE extends "item"
-    ? {
-        item: string;
-        count: number;
-      }
-    : TYPE extends "flag"
-    ? {
-        flag: string;
-        value: boolean;
-      }
-    : TYPE extends "money"
-    ? {
-        money: number;
-      }
-    : TYPE extends "recipe"
-    ? {
-        recipe: string;
-      }
-    : TYPE extends "fame"
-    ? {
-        fame: number;
-      }
-    : never;
-}
-
-interface ILanguageMap {
-  en_US: Record<string, string>;
-  zh_CN: Record<string, string>;
-}
+import type {
+  IEventAction,
+  IEventCondition,
+  IEventReward,
+  ILanguageMap,
+} from "./type";
 
 export class GameEvent extends EventTarget {
   id: string;
@@ -68,8 +18,8 @@ export class GameEvent extends EventTarget {
 
     this.id = id;
     this.sequence = [];
-    this.condition;
-    this.languageMap;
+    this.condition = {};
+    this.languageMap = {};
     this.rewards = [];
     this.repeatable = false;
   }

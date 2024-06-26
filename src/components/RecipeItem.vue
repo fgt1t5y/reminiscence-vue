@@ -3,15 +3,15 @@
     <div class="item-name">
       <div>
         {{ $t(`item.${item}`) }} ×
-        {{ itemProperties[item].buyCount }}
+        {{ itemProperties[item].craftCount }}
       </div>
     </div>
-    <div class="purchase-count">
+    <div class="make-count">
       <div>{{ $t("ui.purchaseCount") }}</div>
       <div>
-        <button @click="purchase(1)">1</button>
-        <button @click="purchase(10)">10</button>
-        <button @click="purchase(100)">100</button>
+        <button @click="craft(1)">1</button>
+        <button @click="craft(10)">10</button>
+        <button @click="craft(100)">100</button>
       </div>
     </div>
   </div>
@@ -22,15 +22,19 @@ import { itemProperties } from "../items";
 import type { IItemCount } from "../type";
 
 defineOptions({
-  name: "PurchaseItem",
+  name: "RecipeItem",
 });
 
 const props = defineProps<{ item: string }>();
 const emits = defineEmits<{
-  (e: "purchase", data: IItemCount): void;
+  (e: "craft", data: IItemCount): void;
 }>();
 
-const purchase = (count: number) => {
-  emits("purchase", { item: props.item, count });
+const craft = (count: number) => {
+  emits("craft", {
+    item: props.item,
+    recipe: itemProperties[props.item].recipe,
+    count,
+  });
 };
 </script>

@@ -1,10 +1,5 @@
 import { compareObjects } from "./utils";
-
-export interface ISettings {
-  saves: Record<number, IGameData | {}>;
-  settings: Record<string, any>;
-  autoLoad?: number;
-}
+import type { ISettings, IGameData } from "./type";
 
 export const defaultSettings: ISettings = {
   saves: {
@@ -19,19 +14,6 @@ export const defaultSettings: ISettings = {
   },
   autoLoad: undefined,
 };
-
-export interface IGameData {
-  day: number;
-  time: number;
-  money: number;
-  fame: number;
-  ongoingEvent: string | null;
-  completedEvents: string[];
-  inventory: Record<string, number>;
-  shelf: null;
-  recipes: Record<string, boolean>;
-  flags: Record<string, boolean>;
-}
 
 export const defaultData: IGameData = {
   day: 0,

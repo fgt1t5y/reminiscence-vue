@@ -30,6 +30,7 @@ export default {
   "message.game.notEnoughItem": "没有足够的物品。",
   "message.game.sold_": "卖出了",
   "message.game.earned_": "赚取了",
+  "message,game": "",
 
   "message.character.welcome": "欢迎来到 Reminiscence！",
 

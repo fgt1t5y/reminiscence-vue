@@ -1,19 +1,4 @@
-export interface IItemCount {
-  item: string;
-  count: number;
-}
-
-export interface IItemProps {
-  tag: string[];
-  price: number;
-  buyCount: number;
-  recipe?: Record<string, number>;
-  craftCount?: number;
-}
-
-export interface IItemGroup {
-  [name: string]: IItemProps;
-}
+import type { IItemGroup } from "./type";
 
 export const itemProperties: IItemGroup = {
   flour: {

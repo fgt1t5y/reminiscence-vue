@@ -48,11 +48,16 @@ html {
   display: flex;
   width: 25%;
   overflow: hidden;
-  gap: 8px;
+  gap: 0.2em;
 }
 
 .game-data-display .btn-regular {
   min-width: unset;
+}
+
+.game-toolbar {
+  display: flex;
+  gap: 0.2em;
 }
 
 .game-screen summary {
@@ -125,7 +130,7 @@ html {
   height: var(--console-input-height);
 }
 
-.input-wrapper aq-tooltip button {
+.input-wrapper button {
   display: block;
   height: var(--console-input-height);
 }
