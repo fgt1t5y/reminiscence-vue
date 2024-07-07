@@ -369,6 +369,7 @@ const listenToEvents = () => {
     event.addEventListener("start", () => {
       gameConsole.put(document.createElement("hr"));
     });
+    // @ts-ignore
     event.addEventListener("step", (e: CustomEvent) => {
       let step = e.detail as IEventAction;
       switch (step.type) {
@@ -394,6 +395,7 @@ const listenToEvents = () => {
         { once: true }
       );
     });
+    // @ts-ignore
     event.addEventListener("complete", (e: CustomEvent) => {
       let rewards = e.detail as IEventReward[];
       rewards.forEach((reward) => {
